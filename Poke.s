@@ -246,6 +246,29 @@ wait_lcd:
  
  rts
  
+;=========================================table===========================
+ 
+table 
+ .word table1
+ .byte "about", $00
+ .word aboutcmd
+ 
+table1 
+ .word table2
+ .byte "reset", $00
+ .word resetcmd
+ 
+table2 
+ .word table3
+ .byte "poke", $00
+ .word pokecmd
+ 
+table3 
+ .word $0000
+ .byte "jump", $00
+ .word jumpcmd
+ 
+ 
  
 
 ;======================sub-rotine to send in a C String===================== 
@@ -281,11 +304,392 @@ text: .ascii "Hello, World from 6502!",'x','8',13,10,0
 
 ;========================````````COMMANDS````````````````===================================================================================================
 
-command_reset: 
-
+resetcmd: 
+ lda #"R"
+ jsr Send_Char
  jmp reset
+ rts
+ 
+pokecmd:
+ 
+ lda #"P"
+ jsr Send_Char
+ 
+ ldx #0
+ lda operand2,x
+
+ cmp #$60
+ bcc upper
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp next
  
  
+upper:
+ cmp #$40
+ bcc number
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp next
+ 
+number:
+ sec
+ sbc #$30
+ 
+next: 
+ asl
+ asl
+ asl
+ asl
+ sta $A4
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+ inx
+ lda operand2,x
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 
+ cmp #$60
+ bcc upper1
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp next1
+ 
+ 
+upper1:
+ cmp #$40
+ bcc number1
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp next1
+ 
+number1:
+ sec
+ sbc #$30
+ 
+next1: 
+ clc
+ adc $A4
+ sta $A4
+  
+ ;;Turn 1st parameter into an address=======================================
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+ ldx #0
+ lda operand1,x
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+ cmp #$60
+ bcc upper2
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp next2
+ 
+ 
+upper2:
+ cmp #$40
+ bcc number2
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp next2
+ 
+number2:
+ sec
+ sbc #$30
+ 
+next2: 
+ asl
+ asl
+ asl
+ asl
+ sta $A3
+ 
+ ;;;;;;;;;;;;;;;;;;;
+ inx
+ lda operand1,x
+ ;;;;;;;;;;;;;;;;;;;
+ 
+ cmp #$60
+ bcc upper3
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp next3
+ 
+ 
+upper3:
+ cmp #$40
+ bcc number3
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp next3
+ 
+number3:
+ sec
+ sbc #$30
+ 
+next3: 
+ clc
+ adc $A3
+ sta $A3
+ 
+ ;;thrid nibble
+;;;;;;;;;;;;;;;;;;;;; 
+ inx
+ lda operand1,x
+ ;;;;;;;;;;;;;;;;;;;;;
+ 
+ 
+ cmp #$60
+ bcc upper4
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp next4
+ 
+ 
+upper4:
+ cmp #$40
+ bcc number4
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp next4
+ 
+number4:
+ sec
+ sbc #$30
+ 
+next4: 
+ asl
+ asl
+ asl
+ asl
+ sta $A2
+ 
+ ;fouth nyble
+;;;;;;;;;;;;;;;;;;;;;;; 
+ inx
+ lda operand1,x
+;;;;;;;;;;;;;;;;;;;;;;; 
+ 
+ cmp #$60
+ bcc upper5
+ 
+ 
+;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp next5
+ 
+ 
+upper5:
+ cmp #$40
+ bcc number5
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp next5
+ 
+number5:
+ sec
+ sbc #$30
+ 
+next5: 
+ clc
+ adc $A2
+ sta $A2
+ 
+ ;;now do the poke
+ 
+ lda $A4
+ ldx #0
+ sta ($A2,x)
+ 
+ lda #"D"
+ jsr Send_Char
+ rts
+ 
+aboutcmd:
+
+ lda #"A"
+ jsr Send_Char
+ rts
+ 
+;===================================================================////////////////////////////////////////////////////=================================================================
+ 
+jumpcmd:
+ lda #"J"
+ jsr Send_Char
+ 
+ ;;Turn 1st parameter into an address=======================================
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+ ldx #0
+ lda operand1,x
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+ cmp #$60
+ bcc .upper2
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp .next2
+ 
+ 
+.upper2:
+ cmp #$40
+ bcc .number2
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp .next2
+ 
+.number2:
+ sec
+ sbc #$30
+ 
+.next2: 
+ asl
+ asl
+ asl
+ asl
+ sta $A3
+ 
+ ;;;;;;;;;;;;;;;;;;;
+ inx
+ lda operand1,x
+ ;;;;;;;;;;;;;;;;;;;
+ 
+ cmp #$60
+ bcc .upper3
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp .next3
+ 
+ 
+.upper3:
+ cmp #$40
+ bcc .number3
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp .next3
+ 
+.number3:
+ sec
+ sbc #$30
+ 
+.next3: 
+ clc
+ adc $A3
+ sta $A3
+ 
+ ;;thrid nibble
+;;;;;;;;;;;;;;;;;;;;; 
+ inx
+ lda operand1,x
+ ;;;;;;;;;;;;;;;;;;;;;
+ 
+ 
+ cmp #$60
+ bcc .upper4
+ ;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp .next4
+ 
+ 
+.upper4:
+ cmp #$40
+ bcc .number4
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp .next4
+ 
+.number4:
+ sec
+ sbc #$30
+ 
+.next4: 
+ asl
+ asl
+ asl
+ asl
+ sta $A2
+ 
+ ;fouth nyble
+;;;;;;;;;;;;;;;;;;;;;;; 
+ inx
+ lda operand1,x
+;;;;;;;;;;;;;;;;;;;;;;; 
+ 
+ cmp #$60
+ bcc .upper5
+ 
+ 
+;; lower case character, so subtract $57
+ 
+ sec
+ sbc #$57
+ jmp .next5
+ 
+ 
+.upper5:
+ cmp #$40
+ bcc .number5
+ 
+ ;;upper case character, so subtract $37
+ 
+ sec
+ sbc #$037
+ jmp .next5
+ 
+.number5:
+ sec
+ sbc #$30
+ 
+.next5: 
+ clc
+ adc $A2
+ sta $A2
+ 
+ jmp $A2
+ 
+ rts
  
 ;========================''''''''COMMANDS''''''''''''''''====================================================================================================
 
@@ -297,31 +701,226 @@ copy_instruction:
 
  ldx acia_rd_ptr
  lda acia_buff,x
- cmp #$B
- beq .done
+ cmp #$00
+ beq .donewithcommand
  sta command,y
  inc acia_rd_ptr
  dec acia_counter
  iny
  jmp .loop 
   
-.done:
+.donewithcommand:
  inc acia_rd_ptr
  dec acia_counter
  lda #$00
  sta command, y
+ ldy #0  ; load 0 back
  
- ldy #0
-.Aloop 
- lda command, y
- cmp #$00
- beq .exit
- jsr Send_Char
- iny
- jmp .Aloop 
+ ;check if thats also the end of command line
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$B
+ beq find
+ 
 
-.exit 
+ 
+ 
+ .getoperand1:
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$00
+ beq .donewithoperand1
+ sta operand1,y
+ inc acia_rd_ptr
+ dec acia_counter
+ iny
+ jmp .getoperand1
+
+ 
+.donewithoperand1:
+
+ inc acia_rd_ptr
+ dec acia_counter
+ lda #$00
+ sta operand1, y
+ ldy #0  ; load 0 back
+ 
+ ;check if thats also the end of command line
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$B
+ beq find
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+.getoperand2:
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$00
+ beq .donewithoperand2
+ sta operand2,y
+ inc acia_rd_ptr
+ dec acia_counter
+ iny
+ jmp .getoperand2
+
+ 
+.donewithoperand2:
+
+ inc acia_rd_ptr
+ dec acia_counter
+ lda #$00
+ sta operand2, y
+ ldy #0  ; load 0 back
+ 
+ ;check if thats also the end of command line
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$B
+ beq find
+ 
+ ;===================================================
+ 
+find:
+
+ lda #"1" 
+ jsr Send_Char
+
+matchcommand:
+
+ lda #<table
+ sta entry
+ lda #>table
+ sta entry+1
+ 
+ 
+;Debuging:
+
+; ldy #0
+;.round
+; lda (entry),y
+; jsr Send_Char
+; beq .done
+; iny
+; jmp .round
+;.done
+; rts
+ 
+testentry: 
+
+cacheptr:
+  ldy #0
+  lda (entry),y
+  sta $AA
+  iny
+  lda (entry),y
+  sta $AB
+  iny
+  ldx #0
+  
+nextchar
+ lda command,x
+ beq endofword
+ cmp (entry), y
+ bne nextentry
+ inx
+ iny
+ jmp nextchar
+ 
+ 
+endofword:
+ lda (entry),y
+ beq successful
+ jmp nextentry
+ 
+  lda #"2" 
+ jsr Send_Char
+ 
+successful:
+ iny
+ lda (entry),y
+ sta $AC
+ iny
+ lda (entry), Y
+ sta $AD
+ jmp ($AC)
+ 
+ lda #"3" 
+ jsr Send_Char
  rts
+ 
+nextentry:
+ lda $AA
+ sta entry
+ lda $AB
+ sta entry+1
+ ora $AA
+ beq nosuccess
+ lda #"4" 
+ jsr Send_Char
+ jmp testentry
+ 
+ 
+ 
+ nosuccess: 
+  lda #"k"
+  jsr Send_Char
+  rts
+ 
+ 
+ 
+ 
+ ;===================================================
+ lda #"2"
+ jsr print_char
+
+ 
+;.lastcheck
+
+; ldy #0
+;.Cloop 
+; lda operand2, y
+; cmp #$00
+; beq .allcheck
+; jsr Send_Char
+; iny
+; jmp .Cloop 
+ 
+ 
+ 
+;.allcheck
+
+; ldy #0
+;.Bloop 
+; lda operand1, y
+; cmp #$00
+; beq .check
+; jsr Send_Char
+; iny
+; jmp .Bloop 
+ 
+;.check:
+; inc acia_rd_ptr
+; dec acia_counter
+
+; ldy #0
+;.Aloop 
+; lda command, y
+; cmp #$00
+; beq .exit
+; jsr Send_Char
+; iny
+; jmp .Aloop 
+
+;.exit 
+; rts
+ 
+
  
 
 
@@ -384,23 +983,31 @@ acia_read_trigger:
  sta ACIA_COMMAND
  
 .enter_detected:
+
+ lda #$00                ;;;insert #$00 string terminator 
+ ldx acia_wr_ptr
+ sta acia_buff,x
+ inc acia_wr_ptr
+ inc acia_counter
+ 
+ lda #$B                ;;;insert #$0B command terminator
+ ldx acia_wr_ptr
+ sta acia_buff,x
+ inc acia_wr_ptr
+ inc acia_counter
  
  jsr copy_instruction
  ;jsr write
  jmp service_acia_end
  
 .space_detected
- lda #$B                ;;;newline
+
+ lda #$00               ;;;newline
  ldx acia_wr_ptr
  sta acia_buff,x
  inc acia_wr_ptr
  inc acia_counter
  
- ;lda #$D                ;;; enter
- ;ldx acia_wr_ptr
- ;sta acia_buff,x
- ;inc acia_wr_ptr
- ;inc acia_counter
  
  jmp service_acia_end 
   
@@ -513,6 +1120,11 @@ irq:
 Array .blk 2
 
 ;text: .asciiz "Hello, Dashian!"
+ 
+ .org $5000
+ 
+
+ 
    
  .org $7f00
   
@@ -529,6 +1141,8 @@ acia_buff .blk 256
   zpage     operand1
   zpage     operand2
   zpage     operand3
+  zpage     entry
+ 
   
   
 acia_rd_ptr:                    ; read pointer
@@ -547,18 +1161,25 @@ lock:
  blk 1
  
 command:
- blk       2
+ blk       10
  
 operand1:
- blk       2  
+ blk       4
  
 operand2:
- blk       2  
- 
+ blk       10 
 operand3:
- blk       2  
+ blk       5
+ 
+entry:
+ blk       10
+ 
+;$00AA-$00AF used for cache
  
  
+;=========================================================================
+
+
  
 ;==========================================================================
 

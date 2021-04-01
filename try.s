@@ -297,20 +297,120 @@ copy_instruction:
 
  ldx acia_rd_ptr
  lda acia_buff,x
- cmp #$B
- beq .done
+ cmp #$00
+ beq .donewithcommand
  sta command,y
  inc acia_rd_ptr
  dec acia_counter
  iny
  jmp .loop 
   
-.done:
+.donewithcommand:
  inc acia_rd_ptr
  dec acia_counter
  lda #$00
  sta command, y
+ ldy #0  ; load 0 back
  
+ ;check if thats also the end of command line
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$B
+ beq .check
+ 
+ 
+ .getoperand1:
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$00
+ beq .donewithoperand1
+ sta operand1,y
+ inc acia_rd_ptr
+ dec acia_counter
+ iny
+ jmp .getoperand1
+
+ 
+.donewithoperand1:
+
+ inc acia_rd_ptr
+ dec acia_counter
+ lda #$00
+ sta operand1, y
+ ldy #0  ; load 0 back
+ 
+ ;check if thats also the end of command line
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$B
+ beq .allcheck
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+.getoperand2:
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$00
+ beq .donewithoperand2
+ sta operand2,y
+ inc acia_rd_ptr
+ dec acia_counter
+ iny
+ jmp .getoperand2
+
+ 
+.donewithoperand2:
+
+ inc acia_rd_ptr
+ dec acia_counter
+ lda #$00
+ sta operand2, y
+ ldy #0  ; load 0 back
+ 
+ ;check if thats also the end of command line
+ ldx acia_rd_ptr
+ lda acia_buff,x
+ cmp #$B
+ beq .lastcheck
+ 
+ ;===================================================
+ lda #"E"
+ jsr print_char
+
+ 
+.lastcheck
+
+ ldy #0
+.Cloop 
+ lda operand2, y
+ cmp #$00
+ beq .allcheck
+ jsr Send_Char
+ iny
+ jmp .Cloop 
+ 
+ 
+ 
+.allcheck
+
+ ldy #0
+.Bloop 
+ lda operand1, y
+ cmp #$00
+ beq .check
+ jsr Send_Char
+ iny
+ jmp .Bloop 
+ 
+ 
+ 
+.check
+
  ldy #0
 .Aloop 
  lda command, y
@@ -384,23 +484,31 @@ acia_read_trigger:
  sta ACIA_COMMAND
  
 .enter_detected:
+
+ lda #$00                ;;;insert #$00 string terminator 
+ ldx acia_wr_ptr
+ sta acia_buff,x
+ inc acia_wr_ptr
+ inc acia_counter
+ 
+ lda #$B                ;;;insert #$0B command terminator
+ ldx acia_wr_ptr
+ sta acia_buff,x
+ inc acia_wr_ptr
+ inc acia_counter
  
  jsr copy_instruction
  ;jsr write
  jmp service_acia_end
  
 .space_detected
- lda #$B                ;;;newline
+
+ lda #$00               ;;;newline
  ldx acia_wr_ptr
  sta acia_buff,x
  inc acia_wr_ptr
  inc acia_counter
  
- ;lda #$D                ;;; enter
- ;ldx acia_wr_ptr
- ;sta acia_buff,x
- ;inc acia_wr_ptr
- ;inc acia_counter
  
  jmp service_acia_end 
   
@@ -547,16 +655,15 @@ lock:
  blk 1
  
 command:
- blk       2
+ blk       10
  
 operand1:
- blk       2  
+ blk       10
  
 operand2:
- blk       2  
- 
+ blk       10 
 operand3:
- blk       2  
+ blk       5
  
  
  
