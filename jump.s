@@ -162,28 +162,39 @@ Print_acia:
   
  
  ;=================================================MAIN LOOP=================================== 
-loop:
+main_loop:
   ;lda ACIA_DATA
   ;cmp #$0D
   ;beq .exit_loop
   ;jmp loop
   
   ;.exit_loop:
-  lda acia_counter
-  beq loop
   
-  ;ldx acia_rd_ptr
-  ;lda acia_buff,x
-  ;inc acia_rd_ptr
-  ;dec acia_counter
   
-   ;lda #"H"
-;  lda ACIA_DATA
-;  sta ACIA_DATA
+  cmp #$B   
+  beq go
+  jmp main_loop
+  
+  
+;only goes to go when A is loaded with a End command  
 
-     
-   
-   ;jsr print_char
+
+go:
+  jsr copy_instruction
+  
+  ;set all back to normal for next cyce of operation
+  
+  stz acia_rd_ptr
+  stz acia_wr_ptr
+  stz acia_counter
+  stz cstring_ptr
+  stz command
+  stz operand1
+  stz operand2
+  stz operand3
+  
+   lda #"H"
+   jsr print_char
 
   
  
@@ -197,7 +208,7 @@ loop:
   
  
   
-  jmp loop
+  jmp main_loop
  
 ;=======================================================MAIN LOOP END==========================
  
@@ -266,9 +277,20 @@ table2
  .word pokecmd
  
 table3 
- .word $0000
+ .word table4
  .byte "jump", $00
  .word jumpcmd
+ 
+table4 
+ .word table5
+ .byte "display", $00
+ .word displaycmd
+ 
+  
+table5 
+ .word $0000
+ .byte "string", $00
+ .word stringcmd
  
  
  
@@ -318,6 +340,18 @@ pokecmd:
  jsr Send_Char
  rts
  
+ displaycmd:
+ lda #"D"
+ jsr Send_Char
+ rts
+
+stringcmd:
+
+ lda #"S"
+ jsr Send_Char
+ rts
+ 
+ 
 aboutcmd:
 
  lda #"A"
@@ -328,6 +362,8 @@ jumpcmd:
  
  lda #"J"
  jsr Send_Char
+ 
+
  
  ;;Turn 1st parameter into an address=======================================
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -738,6 +774,7 @@ nextentry:
  nosuccess: 
   lda #"k"
   jsr Send_Char
+  
   rts
  
  
@@ -824,9 +861,10 @@ acia_read_trigger:
  inc acia_wr_ptr
  inc acia_counter
  
- jsr copy_instruction
- ;jsr write
- jmp service_acia_end
+ 
+ 
+ 
+ jmp service_acia_end_signal    ;jump signalling that end of a command has reached 
  
 .space_detected
 
@@ -838,11 +876,25 @@ acia_read_trigger:
  
  
  jmp service_acia_end 
+ 
+ 
+ ; normal acia end
   
-service_acia_end:
+service_acia_end:  
  plx
  pla
  rti
+ 
+ ;Acia end when we have to signal end of a command line 
+ 
+service_acia_end_signal:
+ plx
+ pla
+ 
+ lda #$B 
+ rti 
+
+ 
 
 ;getting character from the buffer
 Get_Char:
